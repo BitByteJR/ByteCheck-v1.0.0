@@ -1,0 +1,829 @@
+# Universal Email & File Protocol Scanner Configuration v3.0
+# Supports: Email (SMTP/POP3/IMAP) + File (FTP/SMB) + Web protocols
+
+# Protocol ports configuration
+ports:
+  # Email protocols
+  smtp: [25, 465, 587, 2525]          # SMTP (standard, SSL, submission, alt)
+  pop3: [110, 995]                    # POP3 (standard, SSL)
+  imap: [143, 993]                    # IMAP (standard, SSL)
+  
+  # File transfer protocols
+  ftp: [21, 989, 990]                 # FTP (standard, FTPS implicit/explicit)
+  
+  # Network file sharing
+  smb: [445, 139, 135]                # SMB, NetBIOS-SSN, RPC
+  
+  # Web protocols (for webmail detection)
+  web: [80, 443, 8080, 8443]          # HTTP, HTTPS, alternatives
+  
+  # Custom/alternative ports
+  custom: [10025, 10110, 10143, 8025, 8110, 8143, 2121]
+
+# Service detection and interaction
+services:
+  # Email services
+  smtp:
+    banners: ["220", "ESMTP", "Postfix", "Exchange", "Sendmail", "qmail", "Exim", "Zimbra"]
+    commands: 
+      - "EHLO scanner.local"
+      - "HELP"
+      - "NOOP"
+      - "RSET"
+    capabilities_check:
+      - "EHLO scanner.local"
+    auth_methods:
+      - "AUTH LOGIN"
+      - "AUTH PLAIN" 
+      - "AUTH CRAM-MD5"
+    
+  pop3:
+    banners: ["+OK", "POP3", "ready", "Dovecot", "Exchange", "Courier", "Zimbra"]
+    commands:
+      - "CAPA"
+      - "STAT"
+      - "LIST"
+      - "UIDL"
+      - "NOOP"
+    capabilities_check:
+      - "CAPA"
+    
+  imap:
+    banners: ["* OK", "IMAP4", "ready", "Dovecot", "Exchange", "Courier", "Zimbra"]
+    commands:
+      - "A001 CAPABILITY"
+      - "A002 ID NIL"
+      - "A003 NAMESPACE"
+      - "A004 LIST \"\" \"*\""
+    capabilities_check:
+      - "A001 CAPABILITY"
+      - "A002 ID NIL"
+  
+  # File transfer services
+  ftp:
+    banners: ["220", "FTP", "FileZilla", "vsftpd", "ProFTPD", "Pure-FTPd", "IIS", "Serv-U"]
+    commands:
+      - "USER anonymous"
+      - "SYST"
+      - "FEAT"
+      - "HELP"
+      - "PWD"
+    capabilities_check:
+      - "FEAT"
+      - "SYST"
+    auth_methods:
+      - "USER/PASS"
+      - "AUTH TLS"
+      - "AUTH SSL"
+  
+  # SMB/CIFS services
+  smb:
+    banners: ["SMB", "CIFS", "Samba", "Windows", "NetBIOS"]
+    # SMB uses binary protocol, limited text interaction
+    commands: []
+    capabilities_check: []
+  
+  # Web services (for webmail)
+  http:
+    banners: ["HTTP", "Server:", "Apache", "nginx", "IIS", "lighttpd"]
+    commands:
+      - "GET / HTTP/1.1"
+      - "OPTIONS / HTTP/1.1"
+    webmail_detection:
+      - "roundcube"
+      - "squirrelmail" 
+      - "horde"
+      - "zimbra"
+      - "outlook"
+      - "owa"
+      - "webmail"
+
+# Enhanced version detection patterns
+version_patterns:
+  # Email servers - SMTP
+  postfix: "220.*?Postfix\\s+(?:v)?([\\d\\.]+)"
+  exchange: "220.*?Microsoft.*?(?:Version[:\\s]*|v)([\\d\\.]+)"
+  sendmail: "220.*?Sendmail\\s+(?:v)?([\\d\\.]+)"
+  qmail: "220.*?qmail\\s+([\\d\\.]+)"
+  exim: "220.*?Exim\\s+([\\d\\.]+)"
+  zimbra: "220.*?Zimbra\\s+([\\d\\.]+)"
+  
+  # Email servers - POP3/IMAP  
+  dovecot: "(?:\\*\\s+OK|220).*?Dovecot\\s+(?:ready\\s+)?v?([\\d\\.]+)"
+  courier: "\\*\\s+OK.*?Courier[- ](?:IMAP|POP3)\\s+([\\d\\.]+)"
+  cyrus: "\\*\\s+OK.*?Cyrus\\s+(?:IMAP|POP3)\\s+v([\\d\\.]+)"
+  
+  # FTP servers
+  vsftpd: "220.*?vsftpd\\s+([\\d\\.]+)"
+  filezilla: "220.*?FileZilla\\s+Server\\s+(?:version\\s+)?([\\d\\.]+)"
+  proftpd: "220.*?ProFTPD\\s+([\\d\\.]+)"
+  pureftpd: "220.*?Pure-FTPd\\s+([\\d\\.]+)"
+  iis_ftp: "220.*?Microsoft\\s+FTP\\s+Service.*?Version\\s+([\\d\\.]+)"
+  servu: "220.*?Serv-U\\s+FTP\\s+Server\\s+v([\\d\\.]+)"
+  
+  # SMB/Windows
+  samba: "Samba\\s+([\\d\\.]+)"
+  windows: "Windows\\s+([\\d\\.]+)"
+  
+  # Web servers
+  apache: "Server:\\s*Apache[/\\s]+([\\d\\.]+)"
+  nginx: "Server:\\s*nginx[/\\s]+([\\d\\.]+)"
+  iis: "Server:\\s*Microsoft-IIS[/\\s]+([\\d\\.]+)"
+  lighttpd: "Server:\\s*lighttpd[/\\s]+([\\d\\.]+)"
+  
+  # Generic patterns
+  version_generic: "(?:version|ver|v)[:\\s]+([\\d\\.]+)"
+  build_number: "build\\s+([\\d\\.]+)"
+
+# Comprehensive authentication testing
+authentication:
+  test_anonymous: true
+  test_weak_creds: true
+  max_attempts_per_service: 300
+  delay_between_attempts: 0.1
+  stop_on_first_success: true
+  
+  # Universal user list (covering all protocols)
+  common_users:
+    # Administrative accounts
+    - "admin"
+    - "administrator" 
+    - "root"
+    - "user"
+    - "guest"
+    - "test"
+    - "demo"
+    - "support"
+    - "service"
+    - "operator"
+    - "backup"
+    - "manager"
+    
+    # Email-specific accounts
+    - "postmaster"
+    - "mail"
+    - "mailman"
+    - "mailer"
+    - "smtp"
+    - "pop3"
+    - "imap"
+    - "webmail"
+    - "roundcube"
+    - "squirrel"
+    - "horde"
+    - "zimbra"
+    - "exchange"
+    - "outlook"
+    - "dovecot"
+    - "exim"
+    - "sendmail"
+    - "qmail"
+    - "courier"
+    - "cyrus"
+    - "postfix"
+    - "mailserver"
+    - "emailserver"
+    - "abuse"
+    - "noreply"
+    - "bounce"
+    - "listserv"
+    - "majordomo"
+    
+    # File transfer accounts
+    - "ftp"
+    - "ftpuser"
+    - "anonymous"
+    - "upload"
+    - "download"
+    - "files"
+    - "share"
+    - "public"
+    - "temp"
+    - "incoming"
+    - "outgoing"
+    - "transfer"
+    - "data"
+    - "backup"
+    - "archive"
+    - "storage"
+    - "fileserver"
+    - "ftpadmin"
+    - "vsftpd"
+    - "proftpd"
+    - "pureftpd"
+    - "filezilla"
+    
+    # SMB/Windows accounts
+    - "guest"
+    - "everyone"
+    - "users"
+    - "share"
+    - "public"
+    - "anonymous"
+    - "smb"
+    - "cifs"
+    - "samba"
+    - "netbios"
+    - "workgroup"
+    - "domain"
+    - "windows"
+    - "server"
+    - "pc"
+    - "computer"
+    - "machine"
+    - "host"
+    - "client"
+    
+    # Database accounts
+    - "mysql"
+    - "postgres"
+    - "oracle"
+    - "mssql"
+    - "mongodb"
+    - "redis"
+    - "db"
+    - "database"
+    - "sql"
+    - "dba"
+    - "dbuser"
+    - "readonly"
+    - "readwrite"
+    
+    # Web/System accounts
+    - "apache"
+    - "nginx"
+    - "www"
+    - "www-data"
+    - "httpd"
+    - "web"
+    - "webserver"
+    - "tomcat"
+    - "jboss"
+    - "glassfish"
+    - "websphere"
+    - "weblogic"
+    
+    # Network device accounts
+    - "cisco"
+    - "ubnt"
+    - "mikrotik"
+    - "netgear"
+    - "linksys"
+    - "dlink"
+    - "tplink"
+    - "asus"
+    - "belkin"
+    - "zyxel"
+    - "huawei"
+    - "zte"
+    - "juniper"
+    - "fortinet"
+    - "pfsense"
+    - "sophos"
+    
+    # Generic service accounts
+    - "service1"
+    - "service2"
+    - "app"
+    - "application"
+    - "api"
+    - "worker"
+    - "daemon"
+    - "process"
+    - "client"
+    - "server"
+    - "node"
+    - "master"
+    - "slave"
+    
+  # Comprehensive password list
+  common_passwords:
+    # Empty and minimal
+    - ""
+    - " "
+    - "0"
+    - "1"
+    - "123"
+    - "1234"
+    - "12345"
+    - "123456"
+    - "1234567"
+    - "12345678"
+    - "123456789"
+    - "1234567890"
+    
+    # Most common passwords
+    - "password"
+    - "admin"
+    - "test"
+    - "guest"
+    - "user"
+    - "demo"
+    - "root"
+    - "toor"
+    - "pass"
+    - "login"
+    - "access"
+    - "secret"
+    - "master"
+    - "manager"
+    - "supervisor"
+    - "controller"
+    - "operator"
+    - "service"
+    - "support"
+    - "help"
+    - "default"
+    - "changeme"
+    - "change"
+    - "temp"
+    - "temporary"
+    - "welcome"
+    - "letmein"
+    - "qwerty"
+    - "abc123"
+    - "admin123"
+    - "password123"
+    - "test123"
+    - "guest123"
+    - "user123"
+    - "demo123"
+    - "root123"
+    - "pass123"
+    - "login123"
+    
+    # Year-based passwords
+    - "2024"
+    - "2023"
+    - "2022"
+    - "password2024"
+    - "admin2024"
+    - "test2024"
+    - "welcome2024"
+    - "company2024"
+    - "server2024"
+    - "backup2024"
+    
+    # Email-specific passwords
+    - "mail"
+    - "email"
+    - "smtp"
+    - "pop3"
+    - "imap"
+    - "postfix"
+    - "sendmail"
+    - "qmail"
+    - "exim"
+    - "dovecot"
+    - "courier"
+    - "cyrus"
+    - "exchange"
+    - "outlook"
+    - "zimbra"
+    - "roundcube"
+    - "squirrelmail"
+    - "horde"
+    - "webmail"
+    - "mailserver"
+    - "postmaster"
+    - "mailer"
+    - "mailman"
+    - "majordomo"
+    - "listserv"
+    
+    # FTP-specific passwords
+    - "ftp"
+    - "anonymous"
+    - "upload"
+    - "download"
+    - "files"
+    - "share"
+    - "public"
+    - "transfer"
+    - "data"
+    - "backup"
+    - "archive"
+    - "storage"
+    - "vsftpd"
+    - "proftpd"
+    - "pureftpd"
+    - "filezilla"
+    - "ftpuser"
+    - "ftpadmin"
+    - "fileserver"
+    
+    # SMB/Windows passwords
+    - "guest"
+    - "share"
+    - "public"
+    - "smb"
+    - "cifs"
+    - "samba"
+    - "windows"
+    - "server"
+    - "workgroup"
+    - "domain"
+    - "netbios"
+    - "everyone"
+    - "users"
+    
+    # Database passwords
+    - "mysql"
+    - "postgres"
+    - "oracle"
+    - "mssql"
+    - "mongodb"
+    - "redis"
+    - "database"
+    - "db"
+    - "sql"
+    - "data"
+    - "dba"
+    - "sa"
+    - "sysdba"
+    - "dbadmin"
+    - "dbuser"
+    
+    # Web server passwords
+    - "apache"
+    - "nginx"
+    - "www"
+    - "web"
+    - "http"
+    - "https"
+    - "tomcat"
+    - "jboss"
+    - "glassfish"
+    - "websphere"
+    - "weblogic"
+    - "iis"
+    
+    # Network device passwords
+    - "cisco"
+    - "ubnt"
+    - "mikrotik"
+    - "netgear"
+    - "linksys"
+    - "dlink"
+    - "tplink"
+    - "asus"
+    - "belkin"
+    - "zyxel"
+    - "huawei"
+    - "zte"
+    - "enable"
+    - "private"
+    - "community"
+    - "readonly"
+    - "readwrite"
+    - "monitor"
+    - "config"
+    - "setup"
+    - "install"
+    - "maintenance"
+    
+    # Keyboard patterns
+    - "qwerty"
+    - "qwertyuiop"
+    - "asdf"
+    - "asdfgh"
+    - "asdfghjkl"
+    - "zxcv"
+    - "zxcvbn"
+    - "zxcvbnm"
+    - "qazwsx"
+    - "qazwsxedc"
+    - "123qwe"
+    - "qwe123"
+    - "asd123"
+    - "zxc123"
+    - "qweasd"
+    - "1qaz2wsx"
+    - "1q2w3e"
+    - "1q2w3e4r"
+    - "q1w2e3"
+    - "a1s2d3"
+    - "z1x2c3"
+    
+    # Common words
+    - "password"
+    - "admin"
+    - "login"
+    - "access"
+    - "enter"
+    - "key"
+    - "code"
+    - "pin"
+    - "secure"
+    - "safe"
+    - "lock"
+    - "unlock"
+    - "open"
+    - "close"
+    - "start"
+    - "stop"
+    - "begin"
+    - "end"
+    - "finish"
+    - "complete"
+    - "success"
+    - "fail"
+    - "error"
+    - "ok"
+    - "yes"
+    - "no"
+    - "true"
+    - "false"
+    - "on"
+    - "off"
+    - "up"
+    - "down"
+    - "left"
+    - "right"
+    - "in"
+    - "out"
+    - "new"
+    - "old"
+    - "big"
+    - "small"
+    - "high"
+    - "low"
+    - "fast"
+    - "slow"
+    - "good"
+    - "bad"
+    - "best"
+    - "worst"
+    - "first"
+    - "last"
+    - "next"
+    - "prev"
+    - "home"
+    - "work"
+    - "office"
+    - "company"
+    - "business"
+    - "personal"
+    - "private"
+    - "public"
+    - "internal"
+    - "external"
+    - "local"
+    - "remote"
+    - "main"
+    - "backup"
+    - "primary"
+    - "secondary"
+    - "master"
+    - "slave"
+    - "client"
+    - "server"
+    
+  # Protocol-specific default credentials
+  protocol_defaults:
+    smtp:
+      - ["postmaster", ""]
+      - ["mail", "mail"]
+      - ["admin", "smtp"]
+      - ["smtp", "smtp"]
+    pop3:
+      - ["pop3", "pop3"]
+      - ["mail", ""]
+      - ["user", "pop3"]
+    imap:
+      - ["imap", "imap"]
+      - ["cyrus", "cyrus"]
+      - ["dovecot", "dovecot"]
+    ftp:
+      - ["anonymous", ""]
+      - ["ftp", "ftp"]
+      - ["anonymous", "anonymous"]
+      - ["guest", "guest"]
+      - ["upload", "upload"]
+    smb:
+      - ["guest", ""]
+      - ["", ""]
+      - ["administrator", ""]
+      - ["admin", ""]
+
+# Data volume analysis (mainly for email)
+data_volume:
+  high_indicators:
+    banner_size: 1024              # Large banners indicate busy servers
+    response_time: 5000            # Slow responses indicate load
+    email_count: 10000             # High email count threshold
+    folder_count: 50               # Many folders indicate active use
+    traffic_volume: 1073741824     # 1GB threshold
+    
+  critical_indicators:
+    banner_size: 2048
+    response_time: 10000
+    email_count: 50000
+    folder_count: 200
+    traffic_volume: 5368709120     # 5GB threshold
+    
+  analysis_commands:
+    pop3:
+      - "STAT"                     # Message count and total size
+      - "LIST"                     # Individual message sizes
+      - "UIDL"                     # Unique message IDs
+      
+    imap:
+      - "STATUS INBOX (MESSAGES RECENT UNSEEN)"
+      - "LIST \"\" \"*\""          # All folders
+      - "SELECT INBOX"             # Mailbox selection for details
+
+# Vulnerability detection rules
+vulnerabilities:
+  # Email vulnerabilities
+  email:
+    smtp:
+      open_relay:
+        enabled: true
+        test_external_to_external: true
+        success_codes: ["250", "251", "252"]
+        
+      user_enumeration:
+        commands: ["VRFY", "EXPN", "RCPT TO"]
+        test_users: ["root", "admin", "test", "postmaster", "abuse"]
+        success_codes: ["250", "251", "252"]
+        
+      command_injection:
+        test_commands: ["HELP", "DEBUG", "WIZ", "SHELL"]
+        
+    pop3:
+      anonymous_access:
+        test_combinations:
+          - ["anonymous", ""]
+          - ["", ""]
+          - ["guest", ""]
+          - ["test", "test"]
+          
+    imap:
+      anonymous_access:
+        test_combinations:
+          - ["anonymous", ""]
+          - ["guest", "guest"]
+          - ["test", "test"]
+          - ["", ""]
+          
+      capability_enumeration:
+        check_dangerous_capabilities:
+          - "UNSELECT"
+          - "CHILDREN"
+          - "BINARY"
+  
+  # File protocol vulnerabilities
+  file:
+    ftp:
+      anonymous_access:
+        test_users: ["anonymous", "ftp"]
+        test_passwords: ["", "anonymous", "ftp", "guest"]
+        
+      directory_traversal:
+        test_paths: ["../", "..\\", "/etc/passwd", "C:\\windows\\system32"]
+        
+      upload_test:
+        test_upload: true
+        test_filename: "test_upload.txt"
+        
+      bounce_attack:
+        test_port_command: true
+        
+    smb:
+      null_session:
+        test_null_credentials: true
+        
+      share_enumeration:
+        common_shares: ["C$", "ADMIN$", "IPC$", "SYSVOL", "NETLOGON"]
+        
+  # Web vulnerabilities (basic)
+  web:
+    webmail_detection:
+      indicators:
+        roundcube: ["RoundCube", "roundcube", "rcmail"]
+        squirrelmail: ["SquirrelMail", "squirrelmail", "src=\"themes"]
+        horde: ["Horde", "IMP", "horde"]
+        zimbra: ["Zimbra", "VMware Zimbra", "ZmLogin"]
+        owa: ["Outlook", "OWA", "Exchange", "OutlookSession"]
+        afterlogic: ["AfterLogic", "WebMail Lite"]
+        
+    default_credentials:
+      common_paths: ["/login", "/admin", "/management", "/webmail"]
+      test_credentials:
+        - ["admin", "admin"]
+        - ["admin", "password"]
+        - ["admin", ""]
+
+# Connection and timing settings
+timeouts:
+  connect: 5                       # Socket connection timeout
+  read: 8                          # Socket read timeout  
+  ssl_handshake: 10               # SSL handshake timeout
+  auth_attempt: 3                 # Authentication attempt timeout
+  banner_grab: 8                  # Banner grabbing timeout
+  file_operation: 10              # File transfer operation timeout
+
+# SSL/TLS configuration
+ssl:
+  verify_certificates: false      # Don't verify certs for compatibility
+  support_weak_ciphers: true      # Support weak ciphers for old servers
+  minimum_version: "SSLv3"        # Support very old servers
+  cipher_suites: "ALL:@SECLEVEL=0" # Maximum compatibility
+  
+# Performance tuning
+performance:
+  default_threads: 100
+  max_threads: 1000
+  connection_pool_size: 50
+  request_rate_limit: 20          # Requests per second per thread
+  retry_attempts: 2
+  backoff_factor: 1.5
+  memory_limit: "2GB"             # Memory usage limit
+  
+# Output and reporting
+output:
+  real_time: true                 # Real-time console output
+  colors: true                    # ANSI colors in output
+  verbose: false                  # Detailed debug output
+  progress_interval: 2            # Progress update interval (seconds)
+  
+  # File outputs
+  xml_report: true
+  json_report: true
+  csv_export: false
+  html_report: false
+  
+  # Database settings
+  db_file: "scanner.db"
+  db_timeout: 30
+  
+# Risk scoring configuration
+risk_scoring:
+  base_score: 10                  # Base score for any open service
+  ssl_bonus: 5                    # Bonus for SSL/TLS enabled
+  unencrypted_penalty: 20         # Penalty for unencrypted services
+  
+  protocol_scores:
+    email: 15                     # Email protocols base score
+    file: 25                      # File protocols higher risk
+    web: 10                       # Web protocols base score
+    
+  vulnerability_scores:
+    critical: 50                  # Open relay, anonymous upload, etc.
+    high: 40                      # Anonymous access, etc.
+    medium: 20                    # User enumeration, etc.
+    low: 10                       # Information disclosure, etc.
+    
+  weak_credential_penalty: 25     # Per weak credential found
+  file_access_penalty: 15         # Per file access method found
+  
+  data_volume_scores:
+    critical: 30                  # Very high data volume
+    high: 20                      # High data volume
+    medium: 10                    # Medium data volume
+    low: 0                        # Low data volume
+
+# Scanner behavior
+behavior:
+  randomize_scan_order: false     # Keep deterministic for testing
+  skip_ping_check: true          # Don't ping before scanning
+  aggressive_mode: false         # Normal scanning intensity
+  stealth_mode: false            # Normal scanning speed
+  
+  # Rate limiting to avoid detection/blocking
+  max_concurrent_per_host: 10    # Max concurrent connections per host
+  delay_between_hosts: 0         # Delay between scanning different hosts
+  adaptive_timing: true          # Adapt timing based on responses
+  
+# Advanced features
+advanced:
+  # Protocol detection
+  deep_protocol_analysis: true    # Detailed protocol fingerprinting
+  banner_analysis: true          # Extract info from banners
+  capability_enumeration: true   # Enumerate service capabilities
+  
+  # Vulnerability testing
+  safe_vulnerability_testing: true # Only test safe vulnerabilities
+  skip_destructive_tests: true   # Skip tests that could cause damage
+  
+  # File protocol features
+  ftp_passive_mode: true         # Use passive mode for FTP
+  smb_enumeration: false         # Basic SMB detection only (no deep enum)
+  
+# Logging configuration
+logging:
+  enabled: true
+  level: "INFO"                   # DEBUG, INFO, WARNING, ERROR
+  file: "scanner.log"
+  max_size: "50MB"
+  backup_count: 5
+  format: "%(asctime)s - %(levelname)s - %(message)s"
+  
+  # What to log
+  log_successful_scans: true
+  log_failed_connections: false   # Too noisy for mass scans
+  log_vulnerabilities: true
+  log_weak_credentials: true
+  log_file_access: true
+  log_performance_stats: true
